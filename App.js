@@ -1,11 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, TouchableOpacity, View, Modal, Image } from 'react-native';
 import { Camera } from 'expo-camera';
+import { FileSystem } from 'expo-file-system';
 import { useEffect, useState, useRef } from 'react';
 import Icon from "react-native-vector-icons/FontAwesome";
-import * as Permissions from 'expo-permissions'; // deprecated
-import * as MediaLibrary from 'expo-media-library'; // deprecated
-
+import * as Permissions from 'expo-permissions';
+import * as MediaLibrary from 'expo-media-library';
 
 export default function App() {
 const canRef = useRef(null);
@@ -40,10 +40,29 @@ useEffect(() => {
     }
   }
 
-  async function savePicture (){
 
+  async function savePicture() {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+  
+    if (status === 'granted' && capturedPhoto) {
+      try {
+        const asset = await MediaLibrary.createAssetAsync(capturedPhoto);
+        const album = await MediaLibrary.getAlbumAsync('Camera');
+  
+        if (album === null) {
+          await MediaLibrary.createAlbumAsync('Camera', asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
+  
+        console.log('Foto salva com sucesso!');
+      } catch (error) {
+        console.error('Erro ao salvar a foto:', error);
+      }
+    } else {
+      console.log('Permissão de acesso à biblioteca de mídia negada.');
+    }
   }
-
 
   return (
     <View style={styles.container}>
@@ -51,6 +70,7 @@ useEffect(() => {
         style={{flex:1}}
         type={flypCamera}
         ref={canRef}
+        flashMode={Camera.Constants.FlashMode.on}
       >
       <View style={{flex:1, backgroundColor: 'transparent', flexDirection:'row' }}>
         <TouchableOpacity style={{position:'absolute', bottom:20, left:20}} onPress={() => {
